@@ -7,9 +7,9 @@ import pandas as pd
 class MultiViewCTR:
 
 
-    def __init__(self, n_latent, alpha=1, beta=1):
+    def __init__(self, n_components, alpha=1, beta=1, random_state=0):
         # number of latent variables
-        self.n_latent = n_latent
+        self.n_components = n_components
         
         # Dirichlet "smoothing" hyperparameters 
         self.alpha = alpha
@@ -17,6 +17,13 @@ class MultiViewCTR:
 
         # nll to track convergence
         self.neg_log_likelihood = []
+
+        # set seed for random init
+        self.random_state = random_state
+
+    def __str__(self):
+        return "MultiViewCTR(n_components={}, alpha={}, beta={})"\
+            .format(self.n_components, self.alpha, self.beta)
 
 
     def init_cluster_assignment(self, X):
@@ -26,16 +33,19 @@ class MultiViewCTR:
         Parameters:
         X (ndarray): dataset.
         """
+        # set seed for random init
+        np.random.seed(self.random_state)
+
         # number of features
         self.n_features = X.shape[1]
 
         # p = None assumes a uniform distribution
         self.cluster_assignment = np.random.choice(
-            self.n_latent, size=len(X), replace=True, p=None
+            self.n_components, size=len(X), replace=True, p=None
         )
 
         # number of datapoints (or total ratings)
-        # assigned to cluster-feature, shape (n_latent, n_features)
+        # assigned to cluster-feature, shape (n_components, n_features)
         _, counts = np.unique(self.cluster_assignment, return_counts=True)
         self.cluster_feature_count = np.tile(counts, (self.n_features, 1)).T
 
@@ -67,7 +77,7 @@ class MultiViewCTR:
         Returns:
         Unnormalized log probability vector.
         """
-        # cluster feature counts of shape (n_latent, n_features)
+        # cluster feature counts of shape (n_components, n_features)
         m = self.cluster_feature_count
         # cluster assignment counts
         n = m.sum(axis=1)  
@@ -102,7 +112,7 @@ class MultiViewCTR:
         assert round(sum(prob), 5) == 1, "Probability vector not normalized."
 
         # sample
-        z_new = np.random.choice(self.n_latent, 1, p=prob)[0]
+        z_new = np.random.choice(self.n_components, 1, p=prob)[0]
         return z_new
 
     def get_log_likelihood(self):
@@ -125,7 +135,7 @@ class MultiViewCTR:
         # append to trace
         self.neg_log_likelihood.append(-log_likelihood.sum())
 
-    def fit(self, X, n_iter=5):
+    def fit(self, X, n_iter=2):
         """
         Sample from Markov chain.
 
@@ -154,16 +164,7 @@ class MultiViewCTR:
                 # append to trace
                 self.trace.append(z_new)
 
-    def transform(self, X, burn_in=1000):
-        """
-        Transform data into embeddings.
-
-        Returns:
-        Vector embeddings.
-        """
-        self.cluster_feature_count
-
-    def predict(self, X, idx):
+    def transform(self, X):
         """
         Predict embeddings for data.
 
@@ -179,12 +180,11 @@ class MultiViewCTR:
         cfc = self.cluster_feature_count
         cfc = cfc / cfc.sum(axis=0)
 
-        # compute embeddings 
-        embs = X @ (cc.reshape(-1, 1) * np.log(cfc)).T 
-        embs += np.log(cc).mean(axis=0)
+        # compute embeddings
+        embs = np.array([
+            cc * cfc[:, x == 1].prod(axis=1) * (1 - cfc[:, x == 0]).prod(axis=1) 
+            for x in X
+        ])
+        embs = (embs.T / embs.sum(axis=1)).T
 
-        # get embeddings for each datapoint
-        data = pd.DataFrame(embs, index=idx)
-        data = data.groupby(idx).mean()
-
-        return np.exp(data).to_numpy()
+        return embs

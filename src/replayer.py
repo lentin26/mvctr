@@ -149,16 +149,6 @@ class replayer:
         # update user embedding
         self.item_embs[item_id] = (1 / (n + 1)) * (n * v_old + v_new)
 
-    # def update_rating_preds(self, user_id):
-    #     """
-    #     Update rating prediction matrix.
-    #     """
-    #     user_embs = pd.DataFrame(self.user_embs)
-    #     item_embs = pd.DataFrame(self.item_embs)
-    #     self.pred_ratings = \
-    #         (item_embs @ user_embs[user_id].T)\
-    #             .values.reshape(1, -1)
-
     def update_supports(self, user_id, item_id):
         """
         Update user and item supports
@@ -198,11 +188,11 @@ class replayer:
         self.init_user_support(user_ids.unique())
         self.init_item_support(item_ids.unique())
 
-        # get user and item embeddings
+        # init user and item embeddings
         self.init_user_embeddings(user_ids.unique())
         self.init_item_embeddings(item_ids.unique())
 
-        # update predicted ratings matrix
+        # init predicted ratings matrix
         self.update_rating_preds()
 
         # store reccommend item rating in list
