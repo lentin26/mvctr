@@ -1,1 +1,4 @@
-# mvctr
+# Multi-View Collaborative Topic Regression
+
+Abstract:
+Collaborative filtering is widely used in recommender systems across domains like e-commerce and movie streaming to boost user engagement and satisfaction. However, these systems often struggle with the "cold start" problem—figuring out what to recommend to new users or how to recommend new items when no rating data is available. To tackle this issue, we propose a heuristic approach that utilizes historical ratings, along with user, item, and additional categorical features, to create embedding vectors for users and items in cold-start scenarios. Our approach also allows for updating user and item rating predictions as new data becomes available. Additionally, we introduce a novel discrete latent variable model called \textit{multi-view collaborative topic regression} (MVCTR) and compare its performance to current state-of-the-art latent variable models.
